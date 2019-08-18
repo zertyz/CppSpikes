@@ -1,0 +1,15 @@
+#! /bin/bash
+
+TUNE_FLAGS="-march=native -mcpu=native -mtune=native"
+
+echo -en "\n"
+echo -en "Starting CppSpikes build script with:\n"
+echo -en "  TUNE_FLAGS=${TUNE_FLAGS}\n"
+echo -en "\n\n"
+
+m="AtomicExchangeSpikes"
+echo -en "--> Building '$m'...";
+g++ -O0 ${TUNE_FLAGS} -pthread "../${m}.cpp" -o "./${m}" && echo " OK" || echo " FAILED"
+
+echo -en "\nDone.\n\n"
+ls -lrt
