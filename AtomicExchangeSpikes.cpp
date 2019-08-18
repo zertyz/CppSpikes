@@ -8,12 +8,12 @@
              "================================\n" \
              "\n" \
              "This program attempts to demonstrate some use cases of std::atomic.exchange set of functions,\n"   \
-			 "suitable for allowing the implementation of mutex-free queues, stacks, lists, etc: if one can\n"   \
-			 "change the 'head' pointer atomically, these structures will, then, be possible with a simple\n"    \
-			 "implementation -- as opposed to what we currently see as 'lock-free queues' on github.\n"                                \
+             "suitable for allowing the implementation of mutex-free queues, stacks, lists, etc: if one can\n"   \
+             "change the 'head' pointer atomically, these structures will, then, be possible with a simple\n"    \
+             "implementation -- as opposed to what we currently see as 'lock-free queues' on github.\n"          \
              "Here we attempt to change the integer var '_3_5_or_7', whose values comes from the array 'map',\n" \
-			 "which, in turn, depend on the value of '_3_5_or_7' to access the next value. In the end, an\n"     \
-			 "equal number of all possible values must be observed, so we are sure no race condition took place.\n"
+             "which, in turn, depend on the value of '_3_5_or_7' to access the next value. In the end, an\n"     \
+             "equal number of all possible values must be observed, so we are sure no race condition took place.\n"
 
 
 // increase both of these if the reentrancy problem is not exposed
