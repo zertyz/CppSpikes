@@ -7,17 +7,17 @@
 #define DOCS "std::atomic.exchange(...) spikes\n" \
              "================================\n" \
              "\n" \
-             "This programs attempts to demonstrate some use cases of std::atomic.exchange set of functions,\n"  \
+             "This program attempts to demonstrate some use cases of std::atomic.exchange set of functions,\n"   \
 			 "suitable for allowing the implementation of mutex-free queues, stacks, lists, etc: if one can\n"   \
 			 "change the 'head' pointer atomically, these structures will, then, be possible with a simple\n"    \
-			 "implementation -- as opposed to what we currently see on github.\n"                                \
+			 "implementation -- as opposed to what we currently see as 'lock-free queues' on github.\n"                                \
              "Here we attempt to change the integer var '_3_5_or_7', whose values comes from the array 'map',\n" \
 			 "which, in turn, depend on the value of '_3_5_or_7' to access the next value. In the end, an\n"     \
 			 "equal number of all possible values must be observed, so we are sure no race condition took place.\n"
 
 
 // increase both of these if the reentrancy problem is not exposed
-// (remember to disable compilation optimizations)
+// (disabling compilation optimizations might also help)
 #define N_THREADS   12
 #define ITERACTIONS 1<<24
 
@@ -111,9 +111,9 @@ void atomic(int threadNumber) {
 		                                               std::memory_order_release,
 		                                               std::memory_order_relaxed));
 
-        // the solution to the problem presented on this spiked ended up being solved in
+		// the solution to the problem presented on this spike ended up being solved in
 		// https://en.cppreference.com/w/cpp/atomic/atomic/compare_exchange -- a mutexless stack push example
-        // --> the operation implemented here is equivalent to the pop operation.
+		// --> the operation implemented here is equivalent to the 'pop' operation.
 
 		sum[val]++;
 	}
