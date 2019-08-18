@@ -4,12 +4,26 @@
 #include <cstring>
 #include <mutex>
 
-#define ITERACTIONS 1<<26	// increase this if your CPU runs it too fast or if the reentrancy problem is not exposed
+#define DOCS "std::atomic.exchange(...) spikes\n" \
+             "================================\n" \
+             "\n" \
+             "This programs attempts to demonstrate some use cases of std::atomic.exchange set of functions,\n"  \
+			 "suitable for allowing the implementation of mutex-free queues, stacks, lists, etc: if one can\n"   \
+			 "change the 'head' pointer atomically, these structures will, then, be possible with a simple\n"    \
+			 "implementation -- as opposed to what we currently see on github.\n"                                \
+             "Here we attempt to change the integer var '_3_5_or_7', whose values comes from the array 'map',\n" \
+			 "which, in turn, depend on the value of '_3_5_or_7' to access the next value. In the end, an\n"     \
+			 "equal number of all possible values must be observed, so we are sure no race condition took place.\n"
 
 
-int              _3_5_or_7     = 3;
-std::atomic<int> atomic_3_5_or_7(3);
-int map[] = {0,0,0,5,0,7,0,3};
+// increase both of these if the reentrancy problem is not exposed
+// (remember to disable compilation optimizations)
+#define N_THREADS   12
+#define ITERACTIONS 1<<24
+
+
+// test section
+///////////////
 
 long long  finalSum[8];
 std::mutex sumGuard;
@@ -32,6 +46,33 @@ void printSum() {
 	}
 	std::cout << "}\n";
 }
+
+void reentrancyCheck() {
+	std::cout << "--> Reentrancy check: "; 
+	if ( (finalSum[3] == finalSum[5]) && (finalSum[5] == finalSum[7]) ) {
+		std::cout << "PASSED\n"; 
+	} else {
+		std::cout << "FAILED\n"; 
+	}
+}
+
+static struct timespec timespec_now;
+static inline unsigned long long getMonotonicRealTimeNS() {
+    clock_gettime(CLOCK_MONOTONIC, &timespec_now);
+    return (timespec_now.tv_sec*1000000000ll) + timespec_now.tv_nsec;
+}
+
+
+// spike vars
+/////////////
+
+int              _3_5_or_7     = 3;
+std::atomic<int> atomic_3_5_or_7(3);
+int map[] = {0,0,0,5,0,7,0,3};
+
+
+// spike methods
+////////////////
 
 void nonReentrant(int threadNumber) {
 	int sum[] = {0,0,0,0,0,0,0,0};
@@ -70,8 +111,9 @@ void atomic(int threadNumber) {
 		                                               std::memory_order_release,
 		                                               std::memory_order_relaxed));
 
-        // strategy adapted from https://en.cppreference.com/w/cpp/atomic/atomic/compare_exchange -- a mutexless stack push example
-        // (the operation here is equivalent to the pop operation)
+        // the solution to the problem presented on this spiked ended up being solved in
+		// https://en.cppreference.com/w/cpp/atomic/atomic/compare_exchange -- a mutexless stack push example
+        // --> the operation implemented here is equivalent to the pop operation.
 
 		sum[val]++;
 	}
@@ -80,111 +122,60 @@ void atomic(int threadNumber) {
 	std::cout << " done\n" << std::flush;
 }
 
-static struct timespec timespec_now;
-static inline unsigned long long getMonotonicRealTimeNS() {
-    clock_gettime(CLOCK_MONOTONIC, &timespec_now);
-    return (timespec_now.tv_sec*1000000000ll) + timespec_now.tv_nsec;
-}
-
 
 int main(void) {
 
-	std::cout << "std::atomic.exchange(...) spikes. Starting...\n";
-	std::cout << "=============================================\n";
-	std::cout << "\n";
-	std::cout << "This programs attempts to demonstrate a use case of std::atomic suitable for allowing the implementation\n";
-	std::cout << "of mutex-free queues, stacks, lists, etc: if one can change the 'head' pointer atomically, these structures\n";
-	std::cout << "will, then, be possible with a simple implementation -- as opposed to what we currently see on github (very\n";
-	std::cout << "complex implementations, many of which do uses ''fast'' mutexes -- a kind of mutex they implement which don't";
-	std::cout << "involve the kernel).\n";
-	std::cout << "Here we attempt to change the integer var '_3_5_or_7', whose values comes from the array 'map', which, in turn,\n";
-	std::cout << "depend on the value of '_3_5_or_7' to access the next value. In the end, an equal number of all possible values\n";
-	std::cout << "must be observed, so we are sure no race condition took place.\n\n";
+	std::cout << DOCS << "\n";
 
 	std::cout << "Starting the non-reentrant version:\n";
-
 	restartSum();
 	long long start = getMonotonicRealTimeNS();
-	std::thread nonReentrantThreads[] = {
-		std::thread([](int threadNumber) {nonReentrant(threadNumber);}, 1),
-		std::thread([](int threadNumber) {nonReentrant(threadNumber);}, 2),
-		std::thread([](int threadNumber) {nonReentrant(threadNumber);}, 3),
-		std::thread([](int threadNumber) {nonReentrant(threadNumber);}, 4),
-		std::thread([](int threadNumber) {nonReentrant(threadNumber);}, 5),
-		std::thread([](int threadNumber) {nonReentrant(threadNumber);}, 6),
-		std::thread([](int threadNumber) {nonReentrant(threadNumber);}, 7),
-		std::thread([](int threadNumber) {nonReentrant(threadNumber);}, 8),
-		std::thread([](int threadNumber) {nonReentrant(threadNumber);}, 9),
-		std::thread([](int threadNumber) {nonReentrant(threadNumber);}, 10),
-		std::thread([](int threadNumber) {nonReentrant(threadNumber);}, 11),
-		std::thread([](int threadNumber) {nonReentrant(threadNumber);}, 12),
-	};
-
-    for (int i=0; i<sizeof(nonReentrantThreads)/sizeof(nonReentrantThreads[0]); i++) {
+	std::thread nonReentrantThreads[N_THREADS];
+	for (unsigned i=0; i<N_THREADS; i++) {
+		nonReentrantThreads[i] = std::thread([](int threadNumber) {nonReentrant(threadNumber);}, i+1);
+	}
+    for (int i=0; i<N_THREADS; i++) {
     	nonReentrantThreads[i].join();
     }
     long long finish = getMonotonicRealTimeNS();
     printSum();
+	reentrancyCheck();
     std::cout << "--> elapsed time: " << (finish - start) << "ns\n";
-
     std::cout << "--> Please see that the total sums of all domain values (3, 5 and 7) ARE NOT the same\n\n\n";
 
 
 	std::cout << "Starting the reentrant version:\n";
-
 	restartSum();
 	start = getMonotonicRealTimeNS();
-	std::thread reentrantThreads[] = {
-		std::thread([](int threadNumber) {reentrant(threadNumber);}, 1),
-		std::thread([](int threadNumber) {reentrant(threadNumber);}, 2),
-		std::thread([](int threadNumber) {reentrant(threadNumber);}, 3),
-		std::thread([](int threadNumber) {reentrant(threadNumber);}, 4),
-		std::thread([](int threadNumber) {reentrant(threadNumber);}, 5),
-		std::thread([](int threadNumber) {reentrant(threadNumber);}, 6),
-		std::thread([](int threadNumber) {reentrant(threadNumber);}, 7),
-		std::thread([](int threadNumber) {reentrant(threadNumber);}, 8),
-		std::thread([](int threadNumber) {reentrant(threadNumber);}, 9),
-		std::thread([](int threadNumber) {reentrant(threadNumber);}, 10),
-		std::thread([](int threadNumber) {reentrant(threadNumber);}, 11),
-		std::thread([](int threadNumber) {reentrant(threadNumber);}, 12),
-	};
-
-    for (int i=0; i<sizeof(reentrantThreads)/sizeof(reentrantThreads[0]); i++) {
+	std::thread reentrantThreads[N_THREADS];
+	for (unsigned i=0; i<N_THREADS; i++) {
+		reentrantThreads[i] = std::thread([](int threadNumber) {reentrant(threadNumber);}, i+1);
+	}
+    for (int i=0; i<N_THREADS; i++) {
     	reentrantThreads[i].join();
     }
     finish = getMonotonicRealTimeNS();
     printSum();
+	reentrancyCheck();
     std::cout << "--> elapsed time: " << (finish - start) << "ns\n";
-
-    std::cout << "--> Please see that the total sums of all domain values (3, 5 and 7) ARE the same\n\n\n";
+    std::cout << "--> Please see that the total sums of all domain values (3, 5 and 7) ARE the same\n";
+    std::cout << "--> On the other hand, observe the huge 'kernel times', due to the use of mutexes\n\n\n";
+	
 
 	std::cout << "Starting the atomic version:\n";
-
 	restartSum();
 	start = getMonotonicRealTimeNS();
-	std::thread atomicThreads[] = {
-		std::thread([](int threadNumber) {atomic(threadNumber);}, 1),
-		std::thread([](int threadNumber) {atomic(threadNumber);}, 2),
-		std::thread([](int threadNumber) {atomic(threadNumber);}, 3),
-		std::thread([](int threadNumber) {atomic(threadNumber);}, 4),
-		std::thread([](int threadNumber) {atomic(threadNumber);}, 5),
-		std::thread([](int threadNumber) {atomic(threadNumber);}, 6),
-		std::thread([](int threadNumber) {atomic(threadNumber);}, 7),
-		std::thread([](int threadNumber) {atomic(threadNumber);}, 8),
-		std::thread([](int threadNumber) {atomic(threadNumber);}, 9),
-		std::thread([](int threadNumber) {atomic(threadNumber);}, 10),
-		std::thread([](int threadNumber) {atomic(threadNumber);}, 11),
-		std::thread([](int threadNumber) {atomic(threadNumber);}, 12),
-	};
-
-    for (int i=0; i<sizeof(atomicThreads)/sizeof(atomicThreads[0]); i++) {
+	std::thread atomicThreads[N_THREADS];
+	for (unsigned i=0; i<N_THREADS; i++) {
+		atomicThreads[i] = std::thread([](int threadNumber) {atomic(threadNumber);}, i+1);
+	}
+    for (int i=0; i<N_THREADS; i++) {
     	atomicThreads[i].join();
     }
     finish = getMonotonicRealTimeNS();
     printSum();
+	reentrancyCheck();
     std::cout << "--> elapsed time: " << (finish - start) << "ns\n";
-
     std::cout << "--> Can we make this work faster than the reentrant version (which uses mutexes)?\n";
-
 
 }
