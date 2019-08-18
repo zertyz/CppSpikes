@@ -10,16 +10,16 @@ echo -en "\n\n"
 
 function build() {
 	spikeName="$1"
-	O_FLAG="$2"
-	echo -en "--> Building '$spikeName' with '$O_FLAG'..";
+	FLAGS="$2"
+	echo -en "--> Building '$spikeName' with '$FLAGS'..";
 	for compiler in g++ clang++; do
 		echo -en ". ${compiler}"
-		${compiler} ${O_FLAG} ${TUNE_FLAGS} -pthread "../${spikeName}.cpp" -o "./${spikeName}_${compiler}" && echo -en " OK" || echo -en " FAILED"
+		${compiler} ${FLAGS} ${TUNE_FLAGS} -pthread "../${spikeName}.cpp" -o "./${spikeName}_${compiler}" && echo -en " OK" || echo -en " FAILED"
 	done
 	echo "."
 }
 
-build "AtomicExchangeSpikes" "-O3"
+build "AtomicExchangeSpikes" " -std=c++17 -O3"
 
 echo -en "\nDone.\n\n"
 ls -lrt
