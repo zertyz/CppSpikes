@@ -105,11 +105,10 @@ void atomic(int threadNumber) {
 	int sum[] = {0,0,0,0,0,0,0,0};
 	int val;
 	for (unsigned i=0; i < ITERACTIONS; i++) {
-        do {
-            val = atomic_3_5_or_7.load(std::memory_order_relaxed);
-        } while (!atomic_3_5_or_7.compare_exchange_weak(val, map[val],
-		                                               std::memory_order_release,
-		                                               std::memory_order_relaxed));
+		val = atomic_3_5_or_7.load(std::memory_order_relaxed);
+        while (!atomic_3_5_or_7.compare_exchange_weak(val, map[val],
+		                                              std::memory_order_release,
+		                                              std::memory_order_relaxed));
 
 		// the solution to the problem presented on this spike ended up being solved in
 		// https://en.cppreference.com/w/cpp/atomic/atomic/compare_exchange -- a mutexless stack push example
