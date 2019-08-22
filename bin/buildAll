@@ -19,7 +19,8 @@ function build() {
 	echo "."
 }
 
-build "AtomicExchangeSpikes" " -std=c++17 -O3"
+build "AtomicExchangeSpikes"    " -std=c++17 -O3"
+build "MemberOrderAndAlignment" " -std=c++17 -O3"
 
 echo -en "\nDone.\n\n"
 ls -lrt
